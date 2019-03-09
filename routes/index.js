@@ -1,29 +1,47 @@
 var express = require('express');
 var router = express.Router();
+const mongo = require('mongodb')
+const assert = require('assert')
+
+const url = 'mongodb://localhost:27017/test'
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Form Validation', success : req.session.success, errors : req.session.errors });
-  req.session.errors = null 
+  res.render('index')
 });
-router.get('/test/:id',function(req,res,next){
-  res.render('test',{output:req.params.id})
+router.get('/get-data',function(req,res,next){
+  let resultArray = [];
+  mongo.connect(url,function(err,db){
+    assert.equal(null,err)
+    let cursor = db.collection('user-data').find()
+    cursor.forEach(function(doc,err){
+      assert.equal(null,err)
+      resultArray.push(doc)
+    },function(){
+      db.close()
+      res.render('index',{items : resultArray})
+    })
+  })
 })
-router.post('/test/submit',function(req,res,next){
-  let id = req.body.id
-  res.redirect('/test/' + id)  
-})
-router.post('/submit',function(req,res,next){
-  req.check('email', 'Invalid email address').isEmail()
-  req.check('password', 'Password is invalid').isLength({min:4}).equals(req.body.confirmPassword)
-
-  let errors = req.validationErrors()
-  if(errors){
-    req.session.errors = errors
-    req.session.success = false
-  }else {
-    req.session.success = true
+router.post('/insert',function(req,res,next){
+  let item = {
+    title : req.body.title,
+    content : req.body.content,
+    author : req.body.author
   }
-  res.redirect('/')
+  mongo.connect(url,function(err,db){
+    assert.equal(null,err)
+    db.collection('user-data').insertOne(item,function(err,result){
+      assert.equal(null,err)
+      console.log('Item inserted')
+      db.close()
+    })
+  })
+})
+router.post('/update',function(req,res,next){
+
+})
+router.post('/delete',function(req,res,next){
+
 })
 module.exports = router;
